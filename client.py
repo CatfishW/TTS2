@@ -80,7 +80,7 @@ class TTSClient:
             base_url=self.base_url,
             timeout=httpx.Timeout(timeout, connect=10.0),
             limits=limits,
-            http2=True  # Enable HTTP/2 for better multiplexing
+            http2=False  # Disable HTTP/2 to avoid missing dependencies
         )
         
         # Sync client for non-async usage
@@ -348,7 +348,12 @@ class TTSClient:
 
 async def run_demo(args):
     """Run demonstration of the client"""
-    async with TTSClient(base_url=f"http://{args.host}:{args.port}") as client:
+    if args.server_url:
+        base_url = args.server_url
+    else:
+        base_url = f"http://{args.host}:{args.port}"
+        
+    async with TTSClient(base_url=base_url) as client:
         # Health check
         logger.info("Checking server health...")
         try:
@@ -422,6 +427,7 @@ def main():
     )
     parser.add_argument("--host", type=str, default="localhost", help="Server host")
     parser.add_argument("--port", type=int, default=9999, help="Server port")
+    parser.add_argument("--server_url", type=str, help="Full server URL (overrides host/port)")
     parser.add_argument("--text", type=str, help="Text to synthesize")
     parser.add_argument("--voice", type=str, help="Path to speaker reference audio")
     parser.add_argument("--output", "-o", type=str, help="Output audio file path")
@@ -435,7 +441,7 @@ def main():
         parser.print_help()
         print("\nExample usage:")
         print("  python client.py --text 'Hello world' --voice examples/prompt1.wav --output hello.wav")
-        print("  python client.py --voice examples/prompt1.wav --concurrent 5")
+        print("  python client.py --server_url https://example.com/api --text 'Hello'")
         return
     
     asyncio.run(run_demo(args))
